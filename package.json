@@ -1,0 +1,31 @@
+{
+  "name": "docker-manager",
+  "version": "1.0.0",
+  "description": "Professional Zero-Dependency Docker Engine API Management SDK for Node.js and TypeScript",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "docker",
+    "docker-api",
+    "management",
+    "sdk",
+    "typescript",
+    "zero-dependency",
+    "container",
+    "devops"
+  ],
+  "author": "",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
+  }
+}
