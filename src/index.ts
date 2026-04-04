@@ -149,6 +149,7 @@ class DockerClient {
  * Konteyner Modülü
  */
 class ContainerModule {
+  constructor(private client: DockerClient, private emitter: EventEmitter) {}
   /**
    * Mevcut konteynerleri listeler.
    */

@@ -1,5 +1,5 @@
 {
-  "name": "docker-management-sdk",
+  "name": "docker-manager",
   "version": "1.0.0",
   "description": "Professional Zero-Dependency Docker Engine API Management SDK for Node.js and TypeScript",
   "main": "dist/index.js",
@@ -20,6 +20,10 @@
   ],
   "author": "",
   "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/asymmetricstar/Docker-Manager.git"
+    },
   "files": [
     "dist",
     "README.md"

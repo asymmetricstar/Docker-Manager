@@ -220,3 +220,5 @@ try {
 
 ---
 *This SDK is optimized for Docker Engine API v1.43 standards.*
+
+*@asymmetricstar
