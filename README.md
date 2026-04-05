@@ -10,7 +10,7 @@ The system provides a simplified abstraction layer over Docker's complex low-lev
 You can customize the heartbeat (ping) interval and the socket path during initialization.
 
 ```typescript
-import { DockerManager } from './src/index';
+import { DockerManager } from "@asymmetricstar/docker-manager"
 
 // Custom Configuration
 const manager = new DockerManager({

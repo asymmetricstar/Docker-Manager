@@ -176,7 +176,7 @@ class ContainerModule {
     return JSON.stringify(formatted);
   }
 
-  public async create(name: string | null, config: any): Promise<{ Id: string; Warnings: string[] } | null> {
+  public async create(name: string | null, config: ContainerConfig): Promise<{ Id: string; Warnings: string[] } | null> {
     const apiConfig = this.transformConfig(config);
     const path = `/containers/create${name ? `?name=${name}` : ''}`;
     return await this.client.request<{ Id: string; Warnings: string[] }>({ 
@@ -186,16 +186,154 @@ class ContainerModule {
 
   private transformConfig(input: any): any {
     if (input.Image || input.image === undefined) return input;
+
     const config: any = {
+      // ContainerConfig (root-level)
       Image: input.image,
-      Env: input.env ? (Array.isArray(input.env) ? input.env : Object.entries(input.env).map(([k, v]) => `${k}=${v}`)) : [],
+      Hostname: input.hostname,
+      Domainname: input.domainname,
+      User: input.user,
+      AttachStdin: input.attachStdin,
+      AttachStdout: input.attachStdout,
+      AttachStderr: input.attachStderr,
+      Tty: input.tty,
+      OpenStdin: input.openStdin,
+      StdinOnce: input.stdinOnce,
+      Env: input.env
+        ? (Array.isArray(input.env) ? input.env : Object.entries(input.env).map(([k, v]) => `${k}=${v}`))
+        : undefined,
+      Cmd: input.cmd ? (Array.isArray(input.cmd) ? input.cmd : input.cmd.split(' ')) : undefined,
+      Entrypoint: input.entrypoint
+        ? (Array.isArray(input.entrypoint) ? input.entrypoint : input.entrypoint.split(' '))
+        : undefined,
+      WorkingDir: input.workingDir,
+      Labels: input.labels,
+      StopSignal: input.stopSignal,
+      StopTimeout: input.stopTimeout,
+      Shell: input.shell,
+      NetworkDisabled: input.networkDisabled,
+      ArgsEscaped: input.argsEscaped,
       ExposedPorts: {},
+      Volumes: input.volumes ? (() => {
+        const vols: Record<string, {}> = {};
+        (Array.isArray(input.volumes) ? input.volumes : []).forEach((v: string) => {
+          const containerPath = v.split(':')[1] || v;
+          vols[containerPath] = {};
+        });
+        return Object.keys(vols).length > 0 ? vols : undefined;
+      })() : undefined,
+      Healthcheck: input.healthcheck ? {
+        Test: input.healthcheck.test,
+        Interval: this.parseDuration(input.healthcheck.interval),
+        Timeout: this.parseDuration(input.healthcheck.timeout),
+        Retries: input.healthcheck.retries,
+        StartPeriod: this.parseDuration(input.healthcheck.startPeriod)
+      } : undefined,
+
+      // HostConfig
       HostConfig: {
+        // Volumes & Mounts
+        Binds: input.volumes || input.binds || [],
+        Mounts: input.mounts,
+        VolumeDriver: input.volumeDriver,
+        VolumesFrom: input.volumesFrom,
+
+        // Port Bindings
         PortBindings: {},
-        Binds: input.volumes || [],
-        RestartPolicy: { Name: input.restart || 'no' }
+        PublishAllPorts: input.publishAllPorts,
+
+        // Restart
+        RestartPolicy: input.restart
+          ? {
+              Name: typeof input.restart === 'string' ? input.restart : input.restart.name,
+              MaximumRetryCount: typeof input.restart === 'object' ? input.restart.maximumRetryCount : undefined
+            }
+          : { Name: 'no' },
+        AutoRemove: input.autoRemove,
+
+        // Resources - CPU
+        CpuShares: input.cpuShares,
+        CpuPeriod: input.cpuPeriod,
+        CpuQuota: input.cpuQuota,
+        CpuRealtimePeriod: input.cpuRealtimePeriod,
+        CpuRealtimeRuntime: input.cpuRealtimeRuntime,
+        CpusetCpus: input.cpusetCpus,
+        CpusetMems: input.cpusetMems,
+        NanoCpus: input.nanoCpus,
+        CpuCount: input.cpuCount,
+        CpuPercent: input.cpuPercent,
+
+        // Resources - Memory
+        Memory: input.memory,
+        MemoryReservation: input.memoryReservation,
+        MemorySwap: input.memorySwap,
+        MemorySwappiness: input.memorySwappiness,
+        KernelMemoryTCP: input.kernelMemoryTcp,
+
+        // Resources - Block IO
+        BlkioWeight: input.blkioWeight,
+        BlkioWeightDevice: input.blkioWeightDevice,
+        BlkioDeviceReadBps: input.blkioDeviceReadBps,
+        BlkioDeviceWriteBps: input.blkioDeviceWriteBps,
+        BlkioDeviceReadIOps: input.blkioDeviceReadIOps,
+        BlkioDeviceWriteIOps: input.blkioDeviceWriteIOps,
+
+        // Resources - Devices & Limits
+        Devices: input.devices,
+        DeviceCgroupRules: input.deviceCgroupRules,
+        DeviceRequests: input.deviceRequests,
+        PidsLimit: input.pidsLimit,
+        Ulimits: input.ulimits,
+        IOMaximumIOps: input.ioMaximumIOps,
+        IOMaximumBandwidth: input.ioMaximumBandwidth,
+
+        // Cgroups & Init
+        CgroupParent: input.cgroupParent,
+        CgroupnsMode: input.cgroupnsMode,
+        Cgroup: input.cgroup,
+        Init: input.init,
+        OomKillDisable: input.oomKillDisable,
+        OomScoreAdj: input.oomScoreAdj,
+
+        // Network
+        NetworkMode: input.networkMode,
+        Dns: input.dns,
+        DnsOptions: input.dnsOptions,
+        DnsSearch: input.dnsSearch,
+        ExtraHosts: input.extraHosts,
+        Links: input.links,
+
+        // Security
+        Privileged: input.privileged,
+        CapAdd: input.capAdd,
+        CapDrop: input.capDrop,
+        SecurityOpt: input.securityOpt,
+        ReadonlyRootfs: input.readonlyRootfs,
+        MaskedPaths: input.maskedPaths,
+        ReadonlyPaths: input.readonlyPaths,
+
+        // IPC, PID, UTS, Userns
+        IpcMode: input.ipcMode,
+        PidMode: input.pidMode,
+        UTSMode: input.utsMode,
+        UsernsMode: input.usernsMode,
+
+        // Misc
+        GroupAdd: input.groupAdd,
+        LogConfig: input.logConfig,
+        Runtime: input.runtime,
+        ShmSize: input.shmSize,
+        StorageOpt: input.storageOpt,
+        Sysctls: input.sysctls,
+        Tmpfs: input.tmpfs,
+        ContainerIDFile: input.containerIdFile,
+        ConsoleSize: input.consoleSize,
+        Annotations: input.annotations,
+        Isolation: input.isolation
       }
     };
+
+    // Port mappings
     if (input.ports && Array.isArray(input.ports)) {
       input.ports.forEach((p: string) => {
         const [host, container] = p.split(':');
@@ -204,7 +342,59 @@ class ContainerModule {
         config.HostConfig.PortBindings[cPort] = [{ HostPort: host }];
       });
     }
+
+    // NetworkingConfig
+    if (input.networks || input.endpointsConfig || input.network) {
+      const endpoints: Record<string, any> = {};
+      const networkEntries = input.networks || input.endpointsConfig;
+      if (networkEntries && typeof networkEntries === 'object') {
+        Object.entries(networkEntries).forEach(([name, settings]: [string, any]) => {
+          endpoints[name] = {
+            Aliases: settings.aliases,
+            IPAMConfig: settings.ipamConfig
+              ? {
+                  IPv4Address: settings.ipamConfig.ipv4Address,
+                  IPv6Address: settings.ipamConfig.ipv6Address,
+                  LinkLocalIPs: settings.ipamConfig.linkLocalIps
+                }
+              : undefined,
+            IPAddress: settings.ipAddress,
+            IPv6Address: settings.ipv6Address,
+            MacAddress: settings.macAddress,
+            Links: settings.links,
+            DriverOpts: settings.driverOpts
+          };
+        });
+      } else if (input.network) {
+        const net = typeof input.network === 'string' ? input.network : input.network.name;
+        endpoints[net] = {
+          Aliases: typeof input.network === 'object' ? input.network.aliases : undefined,
+          IPAMConfig: typeof input.network === 'object' && input.network.ipAddress
+            ? { IPv4Address: input.network.ipAddress }
+            : undefined
+        };
+      }
+      config.NetworkingConfig = { EndpointsConfig: endpoints };
+    }
+
+    // Remove undefined values to keep payload clean
+    Object.keys(config).forEach(key => {
+      if (config[key] === undefined) delete config[key];
+    });
+    Object.keys(config.HostConfig).forEach(key => {
+      if (config.HostConfig[key] === undefined) delete config.HostConfig[key];
+    });
+
     return config;
+  }
+
+  private parseDuration(val: string | number | undefined): number | undefined {
+    if (val === undefined || val === null) return undefined;
+    if (typeof val === 'number') return val;
+    const units: Record<string, number> = { ns: 1, us: 1000, ms: 1000000, s: 1000000000, m: 60000000000, h: 3600000000000 };
+    const match = val.match(/^(\d+)\s*(ns|us|ms|s|m|h)$/);
+    if (match) return parseInt(match[1]) * (units[match[2]] || 1);
+    return parseInt(val) * 1000000000; // default: seconds to nanoseconds
   }
 
   public async start(id: string): Promise<boolean> {
@@ -337,7 +527,182 @@ class VolumeModule {
 export interface DockerOptions {
   socketPath?: string;
   config?: {
-    ping?: number | string; // Saniye cinsinden ping aralığı
+    ping?: number | string;
+  };
+}
+
+/**
+ * Container oluşturmak için tam yapılandırma arayüzü
+ * Docker Engine API v1.43 /containers/create endpoint'i ile uyumlu
+ */
+export interface ContainerConfig {
+  // === ContainerConfig (root-level) ===
+  image: string;
+  hostname?: string;
+  domainname?: string;
+  user?: string;
+  attachStdin?: boolean;
+  attachStdout?: boolean;
+  attachStderr?: boolean;
+  tty?: boolean;
+  openStdin?: boolean;
+  stdinOnce?: boolean;
+  env?: Record<string, string> | string[];
+  cmd?: string | string[];
+  entrypoint?: string | string[];
+  workingDir?: string;
+  labels?: Record<string, string>;
+  stopSignal?: string;
+  stopTimeout?: number;
+  shell?: string[];
+  networkDisabled?: boolean;
+  argsEscaped?: boolean;
+  healthcheck?: {
+    test: string[];
+    interval?: string | number;
+    timeout?: string | number;
+    retries?: number;
+    startPeriod?: string | number;
+  };
+  volumes?: string[];
+
+  // === HostConfig ===
+  ports?: string[];
+  publishAllPorts?: boolean;
+  restart?: string | { name: string; maximumRetryCount?: number };
+  autoRemove?: boolean;
+  binds?: string[];
+  mounts?: MountConfig[];
+  volumeDriver?: string;
+  volumesFrom?: string[];
+
+  // Resources - CPU
+  cpuShares?: number;
+  cpuPeriod?: number;
+  cpuQuota?: number;
+  cpuRealtimePeriod?: number;
+  cpuRealtimeRuntime?: number;
+  cpusetCpus?: string;
+  cpusetMems?: string;
+  nanoCpus?: number;
+  cpuCount?: number;
+  cpuPercent?: number;
+
+  // Resources - Memory
+  memory?: number;
+  memoryReservation?: number;
+  memorySwap?: number;
+  memorySwappiness?: number;
+  kernelMemoryTcp?: number;
+
+  // Resources - Block IO
+  blkioWeight?: number;
+  blkioWeightDevice?: Array<{ Path: string; Weight: number }>;
+  blkioDeviceReadBps?: Array<{ Path: string; Rate: number }>;
+  blkioDeviceWriteBps?: Array<{ Path: string; Rate: number }>;
+  blkioDeviceReadIOps?: Array<{ Path: string; Rate: number }>;
+  blkioDeviceWriteIOps?: Array<{ Path: string; Rate: number }>;
+
+  // Resources - Devices & Limits
+  devices?: Array<{ PathOnHost: string; PathInContainer: string; CgroupPermissions: string }>;
+  deviceCgroupRules?: string[];
+  deviceRequests?: DeviceRequestConfig[];
+  pidsLimit?: number;
+  ulimits?: Array<{ Name: string; Soft: number; Hard: number }>;
+  ioMaximumIOps?: number;
+  ioMaximumBandwidth?: number;
+
+  // Cgroups & Init
+  cgroupParent?: string;
+  cgroupnsMode?: 'private' | 'host';
+  cgroup?: string;
+  init?: boolean;
+  oomKillDisable?: boolean;
+  oomScoreAdj?: number;
+
+  // Network
+  networkMode?: string;
+  dns?: string[];
+  dnsOptions?: string[];
+  dnsSearch?: string[];
+  extraHosts?: string[];
+  links?: string[];
+
+  // Security
+  privileged?: boolean;
+  capAdd?: string[];
+  capDrop?: string[];
+  securityOpt?: string[];
+  readonlyRootfs?: boolean;
+  maskedPaths?: string[];
+  readonlyPaths?: string[];
+
+  // IPC, PID, UTS, Userns
+  ipcMode?: string;
+  pidMode?: string;
+  utsMode?: string;
+  usernsMode?: string;
+
+  // Misc
+  groupAdd?: string[];
+  logConfig?: { Type: string; Config?: Record<string, string> };
+  runtime?: string;
+  shmSize?: number;
+  storageOpt?: Record<string, string>;
+  sysctls?: Record<string, string>;
+  tmpfs?: Record<string, string>;
+  containerIdFile?: string;
+  consoleSize?: [number, number];
+  annotations?: Record<string, string>;
+  isolation?: string;
+
+  // === NetworkingConfig ===
+  network?: string | { name: string; aliases?: string[]; ipAddress?: string };
+  networks?: Record<string, NetworkEndpointConfig>;
+  endpointsConfig?: Record<string, NetworkEndpointConfig>;
+}
+
+export interface MountConfig {
+  Target: string;
+  Source?: string;
+  Type: 'bind' | 'volume' | 'tmpfs' | 'npipe' | 'cluster';
+  ReadOnly?: boolean;
+  Consistency?: 'default' | 'consistent' | 'cached' | 'delegated';
+  BindOptions?: {
+    Propagation?: string;
+    NonRecursive?: boolean;
+    CreateMountpoint?: boolean;
+  };
+  VolumeOptions?: {
+    NoCopy?: boolean;
+    Labels?: Record<string, string>;
+    DriverConfig?: { Name: string; Options?: Record<string, string> };
+  };
+  TmpfsOptions?: {
+    SizeBytes?: number;
+    Mode?: number;
+  };
+}
+
+export interface DeviceRequestConfig {
+  Driver?: string;
+  Count?: number;
+  DeviceIDs?: string[];
+  Capabilities?: string[][];
+  Options?: Record<string, string>;
+}
+
+export interface NetworkEndpointConfig {
+  aliases?: string[];
+  ipAddress?: string;
+  ipv6Address?: string;
+  macAddress?: string;
+  links?: string[];
+  driverOpts?: Record<string, string>;
+  ipamConfig?: {
+    ipv4Address?: string;
+    ipv6Address?: string;
+    linkLocalIps?: string[];
   };
 }
 
