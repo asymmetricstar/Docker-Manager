@@ -219,6 +219,20 @@ try {
 ```
 
 ---
+## 📋 Changelog
+
+### v1.0.1
+- **Full Docker API Container Config Support** — The `create` method now supports **all** fields from the Docker Engine API v1.43 `/containers/create` endpoint. Previously limited to `image`, `ports`, `env`, `volumes`, and `restart`. New supported fields include:
+  - `cmd`, `entrypoint`, `workingDir`, `user`, `hostname`, `tty`, `labels`
+  - Resource limits: `memory`, `nanoCpus`, `cpuShares`, `ulimits`, `shmSize`
+  - Security: `privileged`, `capAdd`, `capDrop`, `readonlyRootfs`
+  - Networking: `networkMode`, `dns`, `extraHosts`, `networks` (with IPAM config)
+  - Healthcheck, LogConfig, AutoRemove, and many more
+- **TypeScript Interfaces** — Added full type definitions: `ContainerConfig`, `MountConfig`, `NetworkEndpointConfig`, `DeviceRequestConfig`
+- **Auto Config Transformation** — Smart conversion for `cmd` (string → array), `entrypoint` (string → array), `env` (object → array), duration strings (e.g. `"30s"` → nanoseconds), and automatic removal of undefined values from the API payload
+
+---
+
 *This SDK is optimized for Docker Engine API v1.43 standards.*
 
 *@asymmetricstar
