@@ -6,7 +6,7 @@ This library is a high-performance, modular Node.js/TypeScript interface designe
 The system provides a simplified abstraction layer over Docker's complex low-level API. All modules operate through a central `DockerClient`, ensuring secure, robust, and asynchronous communication.
 
 
-## 📦 Npm Install : ```npm npm i @asymmetricstar/docker-manager ```
+## 📦 Npm Install : ```npm i @asymmetricstar/docker-manager ```
 
 ## 🚀 Getting Started & Configuration
 
